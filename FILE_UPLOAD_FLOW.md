@@ -4,6 +4,23 @@ This document outlines the architecture used to handle image uploads in the **Pr
 
 ---
 
+## 🏗️ File Upload System Architecture
+
+```mermaid
+graph LR
+    classDef frontend fill:#E3F2FD,stroke:#1565C0,stroke-width:2px,color:#000
+    classDef backend fill:#E8F5E9,stroke:#2E7D32,stroke-width:2px,color:#000
+    classDef cloud fill:#FFF3E0,stroke:#E65100,stroke-width:2px,color:#000
+    classDef db fill:#FCE4EC,stroke:#C2185B,stroke-width:2px,color:#000
+    
+    A[Admin Panel<br/>React]:::frontend -- multipart/form-data --> B(Node.js Server<br/>Multer Middleware):::backend
+    B -- SDK Upload --> C{Cloudinary CDN}:::cloud
+    C -- Returns secure_url --> B
+    B -- Saves Doctor + URL --> D[(MongoDB)]:::db
+```
+
+---
+
 ## 📖 How It Works (In Plain English)
 
 Here is the step-by-step story of how an image travels from the Admin's computer to the global internet:
@@ -27,27 +44,44 @@ When a patient visits the website, MongoDB just sends them the Cloudinary string
 
 ---
 
-## 📊 File Upload Flowchart
+## 📊 Detailed File Upload Sequence
 
 ```mermaid
 sequenceDiagram
+    autonumber
     participant Admin
-    participant Frontend
-    participant NodeBackend as Node.js (Multer)
-    participant Cloudinary as Cloudinary (CDN)
-    participant MongoDB
-
-    Admin->>Frontend: Selects Image & Submits
-    Frontend->>NodeBackend: POST /add-doctor (multipart/form-data)
-    Note over NodeBackend: Multer parses binary data<br/>temporarily saves to disk
-    NodeBackend->>NodeBackend: Attaches file to req.file
-    NodeBackend->>Cloudinary: cloudinary.uploader.upload(req.file.path)
-    Note over Cloudinary: Compresses & stores image
-    Cloudinary-->>NodeBackend: Returns { secure_url: "https://..." }
-    NodeBackend->>MongoDB: Save Doctor Data + secure_url
-    MongoDB-->>NodeBackend: Success
-    NodeBackend-->>Frontend: { success: true }
-    Frontend->>Admin: Shows "Doctor Added"
+    participant React as React Frontend
+    participant Express as Node.js / Express
+    participant Multer as Multer (Local Disk)
+    participant Cloudinary as Cloudinary Servers
+    participant Mongo as MongoDB
+    
+    Admin->>React: Fills form & Selects Image
+    React->>Express: POST /api/admin/add-doctor (FormData)
+    
+    rect rgb(232, 245, 233)
+    Note over Express, Multer: Multer Middleware Execution
+    Express->>Multer: Pass stream to Multer
+    Multer->>Multer: Extracts Text Fields (req.body)
+    Multer->>Multer: Extracts Binary, Saves as Temp File
+    Multer-->>Express: req.file.path created
+    end
+    
+    rect rgb(255, 243, 224)
+    Note over Express, Cloudinary: Cloudinary SDK Execution
+    Express->>Cloudinary: cloudinary.uploader.upload(req.file.path)
+    Cloudinary->>Cloudinary: Image Compression & Optimization
+    Cloudinary-->>Express: Returns { secure_url }
+    end
+    
+    rect rgb(252, 228, 236)
+    Note over Express, Mongo: Database Execution
+    Express->>Mongo: new Doctor({ image: secure_url, ... })
+    Mongo-->>Express: Success Confirmation
+    end
+    
+    Express-->>React: Response { success: true }
+    React->>Admin: Toast Notification "Doctor Added"
 ```
 
 ---
