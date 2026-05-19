@@ -132,3 +132,34 @@ Stores all the bookings made by users for specific doctors.
 | `cancelled` | `Boolean` | `default: false` | Whether the appointment was cancelled by user/admin. |
 | `payment` | `Boolean` | `default: false` | Whether the Razorpay payment was successful. |
 | `isCompleted` | `Boolean` | `default: false` | Whether the doctor has marked the visit as completed. |
+
+---
+
+## 🎯 Interview Points: How to Draw the Schema
+
+If an interviewer asks you to draw the database schema on a whiteboard or paper, **do not** try to memorize every single field. Instead, focus on the **Core Entities** and the **Relationships** between them. 
+
+### 1. The Whiteboard Drawing
+Draw three main boxes (tables/collections) and connect them like this:
+
+```text
+  [ Users ]  1 ------------- N  [ Appointments ]  N ------------- 1  [ Doctors ]
+  ---------                     ----------------                     -----------
+  _id (PK)                      _id (PK)                             _id (PK)
+  name                          userId (FK)                          name
+  email                         docId (FK)                           email
+  password                      slotDate                             speciality
+                                slotTime                             fees
+                                (Embedded: userData)                 (Embedded: slots_booked)
+                                (Embedded: docData)
+```
+
+### 2. Key Talking Points to Mention
+While drawing the diagram, explain your architectural decisions to the interviewer to show you understand database design:
+
+*   **NoSQL vs SQL:** Mention that since this is MongoDB (NoSQL), these are "Collections" not "Tables", but the logical relationships remain similar.
+*   **The 1-to-N Relationships:** Explain that One User can have Many Appointments (1:N), and One Doctor can have Many Appointments (1:N). The `Appointments` collection acts as the relational bridge.
+*   **The "Embedded Document" Pattern (Crucial):** Point out that inside `Appointments`, you are embedding the `userData` and `docData`. 
+    *   *Why?* "If a doctor changes their consultation fee tomorrow, we don't want past appointments to suddenly show the new fee. By taking a snapshot (embedding the data) at the time of booking, we preserve historical accuracy."
+*   **The `slots_booked` Object in Doctors:** Mention that you used an Object/Dictionary structure (`{ "25_10_2023": ["10:00 AM", "10:30 AM"] }`) instead of an Array. 
+    *   *Why?* Explain that checking for availability in a hash map gives you **O(1) constant time lookup**, which is much faster than looping through an array. This is an excellent performance optimization point to mention in an interview!
