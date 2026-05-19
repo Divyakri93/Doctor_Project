@@ -163,3 +163,29 @@ While drawing the diagram, explain your architectural decisions to the interview
     *   *Why?* "If a doctor changes their consultation fee tomorrow, we don't want past appointments to suddenly show the new fee. By taking a snapshot (embedding the data) at the time of booking, we preserve historical accuracy."
 *   **The `slots_booked` Object in Doctors:** Mention that you used an Object/Dictionary structure (`{ "25_10_2023": ["10:00 AM", "10:30 AM"] }`) instead of an Array. 
     *   *Why?* Explain that checking for availability in a hash map gives you **O(1) constant time lookup**, which is much faster than looping through an array. This is an excellent performance optimization point to mention in an interview!
+
+---
+
+## 💡 Top Interview Questions & Answers
+
+If the interviewer decides to dive deep into your database design, here are the most likely questions they will ask and how to answer them:
+
+**Q1. Why did you choose MongoDB (NoSQL) over a traditional relational database (SQL) for this project?**
+> **Answer:** "MongoDB's flexible document schema is ideal for healthcare applications where data can often be unstructured or semi-structured (e.g., highly varied doctor profiles, flexible address structures). It also allows us to use the Embedded Document pattern efficiently, which reduces the need for complex, heavy SQL `JOIN` operations and speeds up read queries on the frontend."
+
+**Q2. In your `appointments` collection, you embed the entire `userData` and `docData` objects instead of just saving their `_id`. Why?**
+> **Answer:** "This is done to preserve historical accuracy (Point-in-Time data). If a doctor increases their consultation fee a year from now, or a user changes their name, we do not want past appointment receipts to suddenly reflect those new changes. By embedding the data at the exact time of booking, the appointment acts as an immutable historical ledger."
+
+**Q3. How did you design the availability system for Doctors (`slots_booked`)?**
+> **Answer:** "Instead of using an Array of bookings, I designed `slots_booked` as an Object/Hash Map where the keys are dates (e.g., `"25_10_2023"`) and the values are arrays of booked timeslots. This provides **O(1) constant time complexity** to look up if a specific date has any bookings, significantly optimizing performance compared to iterating through an array."
+
+**Q4. I noticed the `{ minimize: false }` option in your Mongoose `doctorSchema`. What is its purpose?**
+> **Answer:** "By default, Mongoose removes empty objects `{}` before saving to the database to save space. However, I need the `slots_booked` property to exist as an empty object by default so I can easily push new date keys into it when a patient books a slot. Setting `{ minimize: false }` forces Mongoose to persist the empty object in the database."
+
+**Q5. How does your system handle concurrent bookings? (e.g., Two users trying to book the exact same slot at the exact same time).**
+> **Answer:** "Currently, the backend checks if the slot exists in the `slots_booked` array. In a high-traffic production environment, this could lead to a race condition. To solve this, I would use MongoDB's atomic operators (like `$addToSet`) to ensure the write only happens if the slot isn't there, or implement a distributed lock (like Redis) to ensure a timeslot can only be written to by one process at a time."
+
+**Q6. What indexes would you add to this database to improve query performance?**
+> **Answer:** 
+> 1. **Users & Doctors:** Create unique indexes on `email` to speed up login lookups and enforce uniqueness at the database level.
+> 2. **Appointments:** Create indexes on `userId` and `docId` because the application frequently runs queries like 'Get all appointments for this user' or 'Get all appointments for this doctor'.
