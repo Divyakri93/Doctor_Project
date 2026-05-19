@@ -122,15 +122,22 @@ sequenceDiagram
 
 **Q11. Draw a diagram of how Multer processes the incoming request.**
 > **Answer:**
-```mermaid
-graph LR
-    A[Incoming Request] -->|multipart/form-data| B(Multer Middleware)
-    B -->|Extracts Text| C[req.body]
-    B -->|Extracts Binary| D[Saves to Disk]
-    D --> E[req.file.path]
-    C --> F(adminController)
-    E --> F
-```
+> ```mermaid
+> graph TD
+>     classDef start fill:#E3F2FD,stroke:#1565C0,stroke-width:2px
+>     classDef process fill:#FFF9C4,stroke:#FBC02D,stroke-width:2px
+>     classDef output fill:#E8F5E9,stroke:#2E7D32,stroke-width:2px
+>     
+>     A[Incoming POST Request<br/>multipart/form-data]:::start --> B{Multer Middleware}:::process
+>     
+>     B -->|Text Fields| C[req.body<br/>(name, email, fees)]:::output
+>     B -->|Binary Data| D[req.file<br/>(Image Buffer)]:::output
+>     
+>     D -.->|diskStorage| E[(Temp File on Server Hard Drive)]
+>     
+>     C --> F[adminController logic]
+>     D --> F
+> ```
 
 ### 🟣 Category 3: Cloudinary & CDN Concepts
 **Q12. Why don't you just save the images in your MongoDB database?**
