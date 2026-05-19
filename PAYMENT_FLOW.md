@@ -30,7 +30,25 @@ The frontend sends the receipt to the backend. **The backend does not trust the 
 
 ---
 
-## 📊 Payment Procedure Flowchart
+## 🏗️ System Architecture Overview
+
+Before looking at the step-by-step sequence, here is how the 4 main components talk to each other:
+
+```mermaid
+graph LR
+    classDef frontend fill:#E3F2FD,stroke:#1565C0,stroke-width:2px,color:#000
+    classDef backend fill:#E8F5E9,stroke:#2E7D32,stroke-width:2px,color:#000
+    classDef thirdparty fill:#FFF3E0,stroke:#E65100,stroke-width:2px,color:#000
+    
+    A[React Frontend]:::frontend <-->|REST API| B(Node.js Backend):::backend
+    A <-->|JS SDK| C{Razorpay Servers}:::thirdparty
+    B <-->|Server API| C
+    B <-->|Mongoose| D[(MongoDB Atlas)]:::thirdparty
+```
+
+---
+
+## 📊 Payment Procedure Sequence
 
 ```mermaid
 sequenceDiagram
@@ -112,6 +130,19 @@ If you claim to have integrated Razorpay on your resume, interviewers will drill
 > **Answer:** You can pass a `theme: { color: "#5f6FFF" }` property inside the `options` object to match the popup's header color to your website's primary brand color.
 
 ### 🟣 Category 3: Backend & Order Creation
+
+**Diagram: The Order Creation Process**
+```mermaid
+graph TD
+    A[Frontend: appointmentId] --> B[Backend receives request]
+    B --> C[Fetch Appointment from DB]
+    C --> D{Check if Cancelled}
+    D -->|Yes| E[Throw Error]
+    D -->|No| F[Create Options: amount*100, receipt=appointmentId]
+    F --> G[Razorpay API: orders.create]
+    G --> H[Return Order_ID to Frontend]
+```
+
 **Q15. Walk me through the backend `paymentRazorPay` API.**
 > **Answer:** It receives the `appointmentId`. It queries the DB to ensure the appointment exists and isn't already cancelled. It creates an `options` object with the amount in paise. It calls `razorpayInstance.orders.create(options)` and returns the resulting order object to the frontend.
 
@@ -164,6 +195,18 @@ graph TD
 
 **Q29. What is a Webhook, and why might you need one for payments in the future?**
 > **Answer:** If the user pays successfully on their phone, but loses internet connection before the frontend can call `/verifyRazorpay`, the DB will never update! A Webhook is an endpoint where Razorpay securely POSTs a message directly to your backend the millisecond the bank confirms the payment, bypassing the frontend entirely.
+>
+> **Diagram: Frontend Verification vs Webhook Verification**
+> ```mermaid
+> graph LR
+>    subgraph Current Approach (Frontend Dependent)
+>    A[Razorpay] -->|Success Event| B[Frontend]
+>    B -->|API Call| C[Backend DB Update]
+>    end
+>    subgraph Webhook Approach (Fail-Safe)
+>    D[Razorpay] -.->|Direct Server POST| E[Backend DB Update]
+>    end
+> ```
 
 ### 🔴 Category 5: System Design & Edge Cases (Advanced)
 **Q30. Design Question: How do you handle "Double Charges" where a user clicks "Pay" twice rapidly?**
