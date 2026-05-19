@@ -44,6 +44,32 @@ graph TD
 
 ---
 
+## 📖 How It Works (In Plain English)
+
+To understand this codebase, you just need to follow the request as it travels from the user's screen (Frontend) to the server (Backend) and finally to the Database. Here is the step-by-step story:
+
+### Step 1: The User Views the Calendar (Frontend)
+**File:** `frontend/src/pages/Appointment.jsx`
+When a user clicks on a doctor, they are taken to the `Appointment.jsx` page. This file runs a loop to figure out the dates for the next 7 days and generates 30-minute time slots (like 10:00 AM, 10:30 AM) for each day. Before showing a time on the screen, it checks the doctor's profile data to see if that time is already in their `slots_booked` list. If it is, it hides that time so no one else can click it.
+
+### Step 2: The User Clicks "Book Appointment" (Frontend -> Backend)
+**File:** `frontend/src/pages/Appointment.jsx` sending a request to `backend/routes/userRoute.js`
+The user selects a date (e.g., `25_10_2023`) and a time (e.g., `10:30 AM`) and clicks the book button. The frontend checks if the user is logged in by looking for their JWT token. If they are, it sends an HTTP POST request (via Axios) to the backend at `/api/user/book-appointment`. It sends the Doctor's ID, the Date, and the Time.
+
+### Step 3: The Server Double-Checks (Backend)
+**File:** `backend/controllers/userController.js` (Function: `bookAppointment`)
+The backend receives the request. It does **not** trust the frontend. It fetches the doctor from the database and checks the `slots_booked` list again. If another user booked that exact time slot 5 seconds ago, the backend stops the process here and replies "Slot not available."
+
+### Step 4: Saving the Receipt (Backend -> Database)
+**File:** `backend/controllers/userController.js` saving via `backend/models/appointmentModel.js`
+If the slot is free, the backend officially reserves it by pushing the time into the doctor's `slots_booked` list. Then, it takes a snapshot of the user's current profile and the doctor's current profile (like their consultation fee) and embeds them into a brand new `Appointment` record. Both the updated Doctor and the new Appointment are saved to the MongoDB Atlas database.
+
+### Step 5: Success & Refresh (Backend -> Frontend)
+**File:** `frontend/src/pages/Appointment.jsx`
+The backend sends a `{ success: true }` message back to the user. The frontend shows a green success popup, refreshes the global doctor data (so the calendar updates immediately), and redirects the user to their "My Appointments" page to view their new booking.
+
+---
+
 ## 💡 Top 30 Interview Questions on the Booking Engine
 
 This section is divided into categories that an interviewer might use to test your knowledge of Frontend, Backend, Data Structures, Concurrency, and System Design.
